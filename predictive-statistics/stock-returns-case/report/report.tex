@@ -13,14 +13,19 @@
 \usepackage{tcolorbox}
 \usepackage{listings}
 \usepackage{enumitem}
+\usepackage{placeins}
+\usepackage{float}
 \usepackage[hidelinks]{hyperref}
 
 \captionsetup{font=small,labelfont=bf,skip=4pt}
 \setlist{nosep,leftmargin=*}
 \setlength{\parskip}{3pt}
 \setlength{\parindent}{0pt}
-\definecolor{boxbg}{HTML}{F3F6FB}
-\definecolor{boxline}{HTML}{2A78D6}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{12pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
 \newcommand{\figdir}{../output/figures}
 
 \lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,frame=single,
@@ -36,8 +41,8 @@
 \maketitle
 \vspace{-0.6cm}
 
-\begin{tcolorbox}[colback=boxbg,colframe=boxline,boxrule=0.5pt,arc=1pt,left=6pt,right=6pt,top=4pt,bottom=4pt]
-\textbf{Answer for the investment committee.} No, not in a way that is useful for forecasting returns. Five well-known
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=6pt,right=6pt,top=4pt,bottom=4pt]
+\textbf{Summary.} No, not in a way that is useful for forecasting returns. Five well-known
 stock characteristics have statistically significant links with next month's return in 2001-2019, but together
 they explain about 0.13\% of the variation. Frozen at the end of 2019 and tested on 2020-2025, no model beats
 forecasting the historical average (1.01\% a month) for every stock. Giving each stock its own average return
@@ -380,7 +385,7 @@ Finance}.\par}
 \section{How the data were built, illustrated}
 \label{app:data}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.95\linewidth]{\figdir/f1_split.pdf}
 \caption{Usable observations per month. Grey rows are dropped because the stock lacks a next month or a full
@@ -388,7 +393,7 @@ momentum history. The black line is the cut between training and test.}
 \label{fig:split}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.95\linewidth]{\figdir/a1_panel.pdf}
 \caption{The unbalanced panel. Each row is a stock, each column a month. White gaps inside a row are months in
@@ -396,7 +401,7 @@ which the stock left the sample and later returned.}
 \label{fig:panel}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.95\linewidth]{\figdir/a2_gap.pdf}
 \caption{Building the target for a real stock with a gap (Cypress Semiconductor, 2008-2009). Numbers are actual
@@ -405,7 +410,7 @@ target.}
 \label{fig:gap}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.95\linewidth]{\figdir/a3_windows.pdf}
 \caption{Months used by each variable at date $t$. Everything left of the dotted line is known at the end of $t$.
@@ -413,7 +418,7 @@ Momentum requires all 11 months; volatility requires 8 of 12.}
 \label{fig:windows}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.95\linewidth]{\figdir/a4_ranks.pdf}
 \caption{Size in December 2019: raw, logarithm and monthly percentile rank. The three marked stocks keep the same
@@ -421,7 +426,7 @@ order in all panels.}
 \label{fig:ranks}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.75\linewidth]{\figdir/a5_funnel.pdf}
 \caption{From raw rows to usable observations. Once the 11-month momentum exists, at least 10 of the 12 volatility
@@ -435,6 +440,7 @@ months exist too, so volatility removes no further rows. Requiring 8 of 11 momen
 to prevent, and its weight among 190,512 observations is negligible. Units of volume and shares outstanding do not
 matter, since multiplying by a constant does not change a rank.
 
+\FloatBarrier
 \section{Python code}
 
 The Python code that reproduces every number and figure in this report is at
