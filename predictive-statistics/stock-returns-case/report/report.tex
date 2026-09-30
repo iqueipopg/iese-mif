@@ -1,0 +1,444 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.8cm,vmargin=1.5cm,includefoot]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small,labelfont=bf,skip=4pt}
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{3pt}
+\setlength{\parindent}{0pt}
+\definecolor{boxbg}{HTML}{F3F6FB}
+\definecolor{boxline}{HTML}{2A78D6}
+\newcommand{\figdir}{../output/figures}
+
+\lstset{basicstyle=\ttfamily\scriptsize,breaklines=true,columns=fullflexible,frame=single,
+  rulecolor=\color{gray!40},keywordstyle=\color{blue!60!black},commentstyle=\color{gray},
+  language=Python,showstringspaces=false}
+
+\title{\vspace{-1.2cm}\textbf{Can we predict stock returns?}\\[2pt]
+\large Out-of-sample evidence from U.S. common stocks, 2000-2025}
+\author{Ignacio Queipo de Llano P\'erez-Gasc\'on\\\small Predictive Statistics in Finance, IESE Master in Finance}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+\vspace{-0.6cm}
+
+\begin{tcolorbox}[colback=boxbg,colframe=boxline,boxrule=0.5pt,arc=1pt,left=6pt,right=6pt,top=4pt,bottom=4pt]
+\textbf{Answer for the investment committee.} No, not in a way that is useful for forecasting returns. Five well-known
+stock characteristics have statistically significant links with next month's return in 2001-2019, but together
+they explain about 0.13\% of the variation. Frozen at the end of 2019 and tested on 2020-2025, no model beats
+forecasting the historical average (1.01\% a month) for every stock. Giving each stock its own average return
+improves the historical fit twentyfold and makes the forecasts 5\% worse. The models can still rank stocks a little.
+\end{tcolorbox}
+
+\section{The question, the data and the rules of the test}
+
+The firm observes thousands of U.S. stocks at the end of each month and wants to know whether what it sees then
+(recent performance, size, risk, trading activity) helps forecast each stock's return over the next month. The data
+come from CRSP through WRDS: 1,063,590 stock-month rows for 12,308 common stocks listed on the NYSE, NYSE American or
+Nasdaq between January 2000 and December 2025, with a month-end price of at least \$5.
+
+\textit{What one row means.} Each row is one stock in one month. I write $R_{i,t}$ for the total return
+(price change plus dividends) of stock $i$ during month $t$; $R_{\text{Apple, Mar 2020}}=-7\%$ is one row. The goal
+is to forecast $R_{i,t+1}$, the same stock's return in the following month, using only information available at the
+end of month $t$. Stocks are tracked by their permanent CRSP number (PERMNO), because tickers and names change.
+
+\textit{The panel has holes, and that matters.} Stocks list, delist and sometimes leave the sample for a few months
+(for example when the price drops below \$5) and come back. There are 14,602 such gaps. If the data were shifted
+row by row, the last month before a gap would be paired with a return from several months later and treated as
+next month's return: a false target. I therefore place every stock on a calendar grid of stocks by months, so
+the previous and the next month always mean calendar months, and a missing month stays missing
+(Appendix~\ref{app:data}, Figures~\ref{fig:panel}-\ref{fig:gap}).
+
+\textit{A chronological split.} The models are estimated on 2001-2019 (training) and judged on 2020-2025 (test),
+as an investor standing at 31 December 2019 would have to. Each observation is a bet with two dates: the day it is
+placed ($t$) and the month it is settled ($t+1$). A bet goes to training only if it was settled by December 2019.
+The forecast made in December 2019 for January 2020 therefore belongs to the test sample, because on 31 December
+2019 the January return was not yet known. It is one month out of 312, but it keeps any future information out of
+training. A random 80/20 split would be less convincing: it would train on 2021 to forecast 2015, which no investor
+can do; the model will be used forward in time, so the honest test runs from past to future; and
+stocks in the same month move together (in March 2020 almost everything fell): splitting one month between training
+and test lets the model learn that month's common shock from half the stocks and predict it for the other half,
+which flatters the test. Figure~\ref{fig:split} shows the resulting samples.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lrrrl}
+\toprule
+& Stock-months & Stocks & Months & Forecast dates $t$ \\
+\midrule
+Training (estimation) & 660,763 & 7,823 & 227 & Jan 2001 to Nov 2019 \\
+Test (evaluation) & 190,512 & 4,279 & 72 & Dec 2019 to Nov 2025 \\
+\bottomrule
+\end{tabular}
+\caption{Usable samples: rows with a next-month return and all five predictors, the same for every model. Most of
+the 212,315 dropped rows are a stock's first year.}
+\label{tab:samples}
+\end{table}
+
+\section{Five signals, and what I expected before looking}
+
+For each stock and month I build five characteristics, all known at the end of month $t$
+(Figure~\ref{fig:windows}):
+\begin{itemize}
+\item \textbf{Current return} $R_{i,t}$: the return during the month just ended.
+\item \textbf{Momentum 12-2}: the compounded return from $t-12$ to $t-2$, requiring all 11 months. The last month is
+skipped on purpose: it is the current return, and over one month returns tend to reverse while over a year they tend
+to persist. Mixing both in one number would blur two opposite effects.
+\item \textbf{Size}: market capitalization (price times shares outstanding).
+\item \textbf{Volatility}: the standard deviation of the stock's own last 12 monthly returns (at least 8 observed).
+\item \textbf{Turnover}: shares traded in the month divided by shares outstanding, i.e.\ the fraction of the company
+that changed hands.
+\end{itemize}
+
+\textit{From raw values to monthly ranks.} Each characteristic is converted into its percentile rank among all stocks
+that month: 0 is the lowest, 0.5 the median, 1 the highest. The five inputs then share one scale, and one extreme
+value (Apple's \$1.3 trillion next to a \$20 million company) cannot dominate the regression
+(Figure~\ref{fig:ranks}). Taking logarithms first would change nothing, because a logarithm keeps the order.
+
+The rank also changes what the current-return signal measures, which is why its coefficient is not that of a
+standard autoregressive AR(1) model, $R_{i,t+1}=a+bR_{i,t}$. Suppose Apple falls 7\%. If the whole market fell 20\%
+that month, Apple was one of the best performers and its rank is close to 1. If the market was flat, the same $-7\%$
+puts Apple near the bottom, with a rank close to 0. An AR(1) sees $-0.07$ in both cases. The rank measures how a
+stock did relative to other stocks that month; it removes the market-wide move and the exact size of the move (a
+fall of 30\% and one of 60\% can both rank near 0).
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{p{2.3cm}cp{7.6cm}ccc}
+\toprule
+Signal & Expected & My reasoning, before looking at the data & Prior & Result & t-stat \\
+\midrule
+Current return & $-$ & Over one month the rebound dominates the trend: stocks that fell hard tend to recover. & weak & $-$ & $-21.8$ \\
+Momentum 12-2 & $+$ & A one-year trend tends to continue. & strong & $\approx 0$ & $-0.8$ \\
+Size & $-$ & Small firms are riskier and less liquid, so investors demand a higher return. & weak & $-$ & $-13.4$ \\
+Volatility & $-$ & Very volatile stocks attract speculators who overpay for them. & strong & $-$ & $-3.1$ \\
+Turnover & $-$ & Rarely traded stocks pay an illiquidity premium, although heavy trading can also signal news. & weak & $\approx 0$ & $1.3$ \\
+\bottomrule
+\end{tabular}
+\caption{The signs I expected, written down before estimating anything so that the explanation could not be
+invented afterwards, against the estimates of model M3 on the training sample (Section~\ref{sec:rich}).
+A t-statistic beyond $\pm 2$ means the effect is distinguishable from zero at the 95\% level.}
+\label{tab:hyp}
+\end{table}
+
+\section{One signal: short-term reversal}
+
+The simplest model regresses next month's return on the rank of this month's return, using the training sample only:
+$R_{i,t+1}=\alpha+\beta\,\text{Rank}_t(R_{i,t})+u_{i,t+1}$. It is estimated by ordinary least squares (OLS), the line
+that minimizes the squared forecast errors. Standard errors use the HC1 correction, which allows the size of the
+unexplained noise to differ across observations, as it does between a utility and a biotech start-up.
+
+\begin{center}\small
+\begin{tabular}{cccccc}
+\toprule
+$\hat\beta$ & Std.\ error (HC1) & t-stat & p-value & 95\% interval & In-sample $R^2$ \\
+\midrule
+$-0.0126$ & 0.00056 & $-22.5$ & $\approx 10^{-112}$ & $[-0.0137,\,-0.0115]$ & 0.098\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textit{Economic size.} A stock at the 10th percentile of this month's returns is forecast to earn
+$0.0163+0.10\times(-0.0126)=1.51\%$ next month; one at the 90th percentile, $0.50\%$. The gap is
+$0.8\hat\beta=-1.01$ percentage points a month. The sign means reversal: this month's losers do better than this
+month's winners, as I expected. On average the effect is sizeable (about 12\% a year before costs), but it is small
+next to the noise, since the typical stock's monthly return has a standard deviation of 11.2\%. Capturing it would
+also mean rebuilding the portfolio every month, often in small illiquid stocks, and trading costs would absorb a
+large part.
+
+\textit{Significant is not the same as predictive.} The t-statistic is enormous and the $R^2$ is tiny, and the two do
+not contradict each other. The p-value answers one narrow question: if the true effect were zero, how likely would
+an estimate this far from zero be? Here it is about $10^{-112}$, so the effect is almost certainly real. It
+says nothing about whether the effect is large or useful. The t-statistic is $\hat\beta$ divided by its standard
+error, and the standard error shrinks as the sample grows; with 660,763 observations even a small effect is measured
+very precisely. The $R^2$, the share of the variation in returns that the model explains, does not grow with the
+sample. It depends on how much the forecast moves (between 0.5\% and 1.5\%) relative to how much returns move
+($\pm$11\%). Collecting more data would not raise it. HC1 treats rows as independent; since stocks in the same month move together, the true t-statistic is somewhat
+smaller, but still large.
+
+\section{Adding signals}
+\label{sec:rich}
+
+Three nested models are estimated on exactly the same 660,763 rows, so any change in fit comes from the added
+signals and not from a different sample: M1 (current return), M2 (adds momentum and size) and M3 (adds volatility
+and turnover).
+
+\begin{table}[h]
+\centering\footnotesize\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccccc}
+\toprule
+& Signals & In-sample $R^2$ & Current return & Momentum & Size & Volatility & Turnover \\
+\midrule
+M1 & 1 & 0.098\% & $-0.0126$ ($-22.5$) & & & & \\
+M2 & 3 & 0.132\% & $-0.0122$ ($-21.8$) & $-0.0004$ ($-0.7$) & $-0.0072$ ($-16.0$) & & \\
+M3 & 5 & 0.134\% & $-0.0122$ ($-21.8$) & $-0.0005$ ($-0.8$) & $-0.0079$ ($-13.4$) & $-0.0019$ ($-3.1$) & $+0.0009$ ($1.3$) \\
+\midrule
+\multicolumn{3}{l}{M3: 90th minus 10th percentile, pp/month} & $-0.98$ & $-0.04$ & $-0.63$ & $-0.15$ & $+0.07$ \\
+\bottomrule
+\end{tabular}
+\caption{Pooled OLS on the training sample. Coefficients with HC1 t-statistics in parentheses.}
+\label{tab:rich}
+\end{table}
+
+Three of my five signs are confirmed (Table~\ref{tab:hyp}). Reversal, which I rated as uncertain, is the strongest
+effect. Momentum, my firmest prior, is zero in this period. A likely reason is the momentum crash of 2009: momentum
+buys recent winners and sells recent losers, and in the spring of 2009 the biggest losers of the 2008 crisis
+(banks, cyclicals) rebounded hardest, wiping out the strategy's gains of the preceding years (Daniel and Moskowitz,
+2016). Size is strongly significant ($t=-16$) yet moves the $R^2$ by only 0.03 points, the same lesson as before.
+
+The in-sample $R^2$ rises from 0.098\% to 0.134\%, and it could not have fallen: M1 is M3 with the extra
+coefficients set to zero, and OLS picks the best-fitting coefficients, so it always matches the smaller model at
+least. It would rise even with a pure-noise variable, which OLS uses to fit this sample's noise, so a higher
+in-sample $R^2$ says nothing about forecasting. Only new data can tell the two apart.
+
+\textit{Why the $R^2$ is so low.} Missing variables are only part of the story. First, 16.4\% of the variation in
+next-month returns is the move common to all stocks in that month; signals ranked within the month can only say which
+stocks will beat the others, never whether the market as a whole rises or falls. Second, most of the rest is news
+specific to each company (earnings, lawsuits, takeovers) that is unknowable at $t$. Third, funds would trade away a pattern
+that simple. The best published models, with hundreds of signals and neural networks, reach an out-of-sample $R^2$ of
+about 0.4\% a month for individual stocks (Gu, Kelly and Xiu, 2020); 0.5\% counts as a success.
+
+\section{The real test: forecasting 2020-2025}
+
+The coefficients of M1-M3 are frozen at the end of 2019 and used to forecast every stock-month of the test period.
+Each model is compared with a benchmark that forecasts the same number for every stock: the average next-month
+return in training, 1.01\%. (This is exactly the OLS model with only a constant.) Accuracy is measured by the mean
+squared error (MSE), the average of the squared forecast errors, and summarized by the out-of-sample $R^2$,
+$R^2_{\text{OOS}} = 1-\text{MSE}_{\text{model}}/\text{MSE}_{\text{benchmark}}$. A positive value means the model's forecasts were closer to what happened than the average; a negative one means they
+were further away. Unlike the in-sample $R^2$, it can be negative, because the frozen coefficients were chosen to fit
+2001-2019 and nothing forces them to beat the average on data they never saw.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}[t]{0.49\linewidth}\vspace{0pt}\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+& In-sample $R^2$ & Test MSE & $R^2_{\text{OOS}}$ \\
+\midrule
+Benchmark (1.01\%) & n/a & 0.018262 & 0 \\
+M1 & 0.098\% & 0.018263 & $-0.002\%$ \\
+M2 & 0.132\% & 0.018260 & $+0.010\%$ \\
+M3 & 0.134\% & 0.018263 & $-0.004\%$ \\
+\bottomrule
+\end{tabular}\\[6pt]
+\begin{tabular}{lcccccc}
+\toprule
+$R^2_{\text{OOS}}$ & 2020 & 2021 & 2022 & 2023 & 2024 & 2025 \\
+\midrule
+M1 & $+.03$ & $+.00$ & $+.05$ & $+.07$ & $-.03$ & $-.17$ \\
+M2 & $+.02$ & $-.02$ & $+.14$ & $+.04$ & $-.04$ & $-.13$ \\
+M3 & $-.02$ & $-.01$ & $+.16$ & $-.01$ & $-.04$ & $-.15$ \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Test period, 190,512 stock-months. Bottom: $R^2_{\text{OOS}}$ by year, in \%.}
+\label{tab:oos}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}\vspace{0pt}\centering
+\includegraphics[width=\linewidth]{\figdir/f2_r2.pdf}
+\caption{Fit keeps rising as signals are added; forecasting accuracy stays at zero.}
+\label{fig:r2}
+\end{minipage}
+\end{figure}
+
+No model beats the average in any meaningful way. The MSEs differ in the sixth decimal, M2 leads by 0.01\% (fifty
+times below what the literature calls success), the ranking flips from year to year, and the model with the highest
+in-sample $R^2$ (M3) does not have the lowest test error. A negative $R^2_{\text{OOS}}$ means that the model's return
+forecasts left us further from reality than assuming every stock earns its usual return.
+
+Figure~\ref{fig:pred} shows why. The forecasts all sit between 0.2\% and 1.8\% while realized returns range from
+$-32\%$ to $+41\%$ (1st to 99th percentile); monthly averages across stocks swung between $-21\%$ and $+17\%$ in the
+test period, moves that no cross-sectional signal can see. Panel (b) adds a nuance: sorted
+into ten groups by forecast, the top group still earned 1.72\% a month against 0.75\% for the bottom group in the test
+period (1.61 points in training). The $R^2_{\text{OOS}}$ asks whether the forecast gets the level of each return
+right; it does not ask whether the model ranks stocks well. A long-short portfolio could still earn part of that
+spread before costs, which is a different question from the one tested here.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.84\linewidth]{\figdir/f3_pred_vs_real.pdf}
+\caption{Forecasts against reality for M3. (a) Distribution of forecasts and realized returns in 2020-2025.
+(b) Stocks grouped into deciles by their forecast: average forecast against average realized return.}
+\label{fig:pred}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.84\linewidth]{\figdir/f6_horizon.pdf}
+\caption{The frozen models used month after month, 2020-2025. (a) Growth of \$1 in the average stock against what
+each model forecast. (b) Cumulative squared error of the historical mean minus that of each model. (c) Monthly
+portfolio long the 10\% of stocks with the highest forecast and short the 10\% with the lowest, before costs.}
+\label{fig:horizon}
+\end{figure}
+
+Figure~\ref{fig:horizon} follows the frozen models over the six test years. All three forecast a smooth 1\% a month, like the historical mean, while \$1 in the average stock fell to 0.70 in March
+2020, rose to 1.45 by 2021 and ended at 1.88 against the 2.05 the models expected (panel a). Panel (b) accumulates the
+squared error each model saves relative to the mean: all three were ahead until mid-2023, then gave the advantage
+back, and by 2025 M1 and M3 were behind. Used only to rank stocks (panel c), M2 and M3 would have turned \$1 into
+about \$1.45 over six years before costs (0.6\% a month on average), with monthly swings of $\pm$4.6\%, a worst month
+of $-9\%$ and most of the gain lost after 2024. What works is small, noisy and fragile.
+
+\textit{Three kinds of $R^2$.} Think of an exam. The in-sample $R^2$ is the grade on a practice exam whose questions
+you studied, part knowledge and part memorized answers. The population $R^2$ is what you really know; nobody sees it,
+and the sample $R^2$ overstates it. The out-of-sample $R^2$ is the grade on the real exam, with new questions and
+perhaps a new syllabus. Only it uses unseen data, and only it can reveal a world that has changed.
+
+\section{Why the forecasts failed: the relationships moved}
+
+With 660,763 observations and five signals, classic overfitting is negligible (the memorized part of the
+in-sample $R^2$ is about $5/660{,}763\approx0.001\%$), so 0.134\% was a fair estimate for 2001-2019. To see what
+changed I re-estimated M3 on the test period, as an after-the-fact diagnostic not used to choose anything
+(Figure~\ref{fig:coefs}). Reversal and the size effect survive at
+about half their strength. Volatility reverses sign: from $-0.15$ to $+0.83$ points ($t=+7.5$), as highly volatile
+stocks led the post-COVID rebound and the speculative rally of 2020-2021. The frozen M3 was betting against the
+volatile stocks exactly when they won, which is why it did worse than M2, which does not use volatility. The average
+return did not move (1.01\% in both periods), so the problem is the slopes; noise rose (standard deviation 13.5\%
+against 11.2\%); and even fitted on 2020-2025 itself, M3 explains only 0.07\%.
+
+\section{Letting each stock have its own average: fixed effects}
+
+Pooled OLS gives every stock the same intercept $\alpha$. A stock fixed-effects model gives each training stock
+its own average return, $R_{i,t+1}=\alpha_i+\beta'X_{i,t}+u_{i,t+1}$: 7,823 intercepts. I estimate it by subtracting each stock's own training mean from its returns and signals (the
+within transformation), estimating $\beta$, and recovering $\hat\alpha_i=\bar R_i-\hat\beta'\bar X_i$.
+
+\begin{figure}[h]
+\centering
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}\centering
+\includegraphics[width=\linewidth]{\figdir/f4_coefs.pdf}
+\caption{M3 estimated separately on each period, as the predicted return gap between a 90th and a 10th percentile
+stock. Bars show 95\% intervals.}
+\label{fig:coefs}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}\centering
+\includegraphics[width=0.92\linewidth]{\figdir/f5_fe_persistence.pdf}
+\caption{Each dot is a stock: its average monthly return in 2001-2019 against 2020-2025 (clipped at $\pm$10\%).}
+\label{fig:fe}
+\end{minipage}
+\end{figure}
+
+\begin{center}\small
+\begin{tabular}{lccc}
+\toprule
+& In-sample $R^2$ (overall) & In-sample $R^2$ (within) & $R^2_{\text{OOS}}$, same 159,605 test rows \\
+\midrule
+Pooled OLS, M3 & 0.134\% & n/a & $+0.017\%$ \\
+Stock fixed effects, M3 & 2.929\% & 1.317\% & $-4.96\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The overall $R^2$ compares the full fitted values (own intercept plus signals) with actual returns, so it includes
+what the intercepts explain about why some stocks earned more on average. The within $R^2$ removes each stock's mean
+first and only measures how well the signals explain each stock's moves around its own average. The overall fit can only improve on pooled OLS: pooled OLS is the special
+case with all intercepts equal, and OLS would choose that if it fitted best.
+
+The improvement does not survive. On the test rows of stocks already seen in training, fixed effects are 4.96\% worse
+than the average, against $+0.017\%$ for pooled OLS. The reason is Figure~\ref{fig:fe}: across 2,879 stocks, the correlation between a stock's average return in 2001-2019
+and in 2020-2025 is only 0.10. Persistent differences in average return across individual stocks are small next to
+the noise, and a stock's own history is mostly luck. The intercepts spread 6.7 points a month across stocks, far too much to be
+real differences in expected return: half the stocks have under 59 months of history and 28\% under 24, and the
+average of 20 returns moving $\pm$11\% says very little. Two further problems: a stock listed after 2019 has no intercept at all (30,907 test rows, 16\%, from about 1,400 new
+stocks, many of them the 2021 wave of IPOs and SPACs), and the size coefficient jumps to $-0.152$ ($t=-65$) because
+subtracting each stock's mean over the whole period lets the model see, within the sample, whether the stock is
+expensive relative to its own future average. That inflates the fit and is useless for forecasting. A workable
+alternative gives new stocks the common intercept and pulls each $\alpha_i$ toward it, more so the shorter its
+history.
+
+\section{Conclusions for the committee}
+
+\begin{enumerate}
+\item The signals are real but small: reversal and size are highly significant yet explain about 0.1\% of returns.
+\item Better fit did not mean better forecasts: out of sample every model matched the historical average.
+\item The failure came from unstable relationships more than from overfitting: reversal and size halved and volatility
+changed sign after 2019. Stock fixed effects add real overfitting and do much worse.
+\item I would not use these models to forecast return levels. The ranking signal deserves a proper test: long-short
+portfolios net of trading costs, re-estimated as time passes and judged on unseen data.
+\end{enumerate}
+
+{\footnotesize\textbf{References.} Ang, Hodrick, Xing and Zhang (2006), \textit{Journal of Finance}; Banz (1981),
+\textit{Journal of Financial Economics}; Daniel and Moskowitz (2016), \textit{Journal of Financial Economics}; Datar,
+Naik and Radcliffe (1998), \textit{Journal of Financial Markets}; Gu, Kelly and Xiu (2020), \textit{Review of
+Financial Studies}; Jegadeesh (1990), \textit{Journal of Finance}; Jegadeesh and Titman (1993), \textit{Journal of
+Finance}.\par}
+
+\clearpage
+\appendix
+\setcounter{figure}{0}\renewcommand{\thefigure}{A\arabic{figure}}
+\section{How the data were built, illustrated}
+\label{app:data}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{\figdir/f1_split.pdf}
+\caption{Usable observations per month. Grey rows are dropped because the stock lacks a next month or a full
+momentum history. The black line is the cut between training and test.}
+\label{fig:split}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{\figdir/a1_panel.pdf}
+\caption{The unbalanced panel. Each row is a stock, each column a month. White gaps inside a row are months in
+which the stock left the sample and later returned.}
+\label{fig:panel}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{\figdir/a2_gap.pdf}
+\caption{Building the target for a real stock with a gap (Cypress Semiconductor, 2008-2009). Numbers are actual
+monthly returns. Shifting rows pairs October 2008 with the February 2009 return; the calendar grid leaves it without a
+target.}
+\label{fig:gap}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{\figdir/a3_windows.pdf}
+\caption{Months used by each variable at date $t$. Everything left of the dotted line is known at the end of $t$.
+Momentum requires all 11 months; volatility requires 8 of 12.}
+\label{fig:windows}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{\figdir/a4_ranks.pdf}
+\caption{Size in December 2019: raw, logarithm and monthly percentile rank. The three marked stocks keep the same
+order in all panels.}
+\label{fig:ranks}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.75\linewidth]{\figdir/a5_funnel.pdf}
+\caption{From raw rows to usable observations. Once the 11-month momentum exists, at least 10 of the 12 volatility
+months exist too, so volatility removes no further rows. Requiring 8 of 11 momentum months instead would add about
+55,000 rows but mix periods of different length.}
+\label{fig:funnel}
+\end{figure}
+
+\textbf{Data notes.} The file has no missing values in the variables used. One return of $-100\%$ (a SPAC in March
+2024, in the test period) was kept: changing test data after looking at it is what the chronological split is meant
+to prevent, and its weight among 190,512 observations is negligible. Units of volume and shares outstanding do not
+matter, since multiplying by a constant does not change a rank.
+
+\section{Python code}
+
+The Python code that reproduces every number and figure in this report is at
+\url{https://github.com/iqueipopg/iese-mif/tree/main/predictive-statistics/stock-returns-case}. The README there
+lists the order in which to run the scripts. The CRSP data are licensed through WRDS and are not included.
+
+\end{document}

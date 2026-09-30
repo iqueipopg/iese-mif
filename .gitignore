@@ -1,0 +1,19 @@
+# Licensed or copyrighted inputs: never commit
+**/data/
+**/docs/
+
+# Python and tooling
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# LaTeX build files
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Personal study aids in Spanish
+**/output/demo/
+**/src/demo_features.py
