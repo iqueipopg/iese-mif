@@ -1,0 +1,12 @@
+,training 18-08-2017 to 31-12-2024
+N (days),2693.0
+mean (%),0.11404553327458329
+std dev (%),3.7116699791824144
+"annualised vol (%, x sqrt 365)",70.91135538503586
+skewness,-0.7498865620517379
+excess kurtosis,12.474301650662055
+min (%),-46.47301753397741
+max (%),22.51189543413279
+Jarque-Bera p-value,0.0
+days with |r| > 4 sd,12.0
+expected under Normal,0.1705813085131836

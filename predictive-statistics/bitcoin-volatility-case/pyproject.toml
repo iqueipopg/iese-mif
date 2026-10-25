@@ -1,0 +1,13 @@
+[project]
+name = "bitcoin-volatility-case"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "arch>=7.2",
+    "matplotlib>=3.10",
+    "numpy>=2.2",
+    "pandas>=2.2",
+    "pyarrow>=19.0",
+    "scipy>=1.15",
+    "statsmodels>=0.14",
+]
