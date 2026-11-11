@@ -1,0 +1,22 @@
+|--- TotalWorkingYears <= 1.50
+|   |--- Age <= 33.50
+|   |   |--- OverTime <= 0.50
+|   |   |   |--- weights: [20.00, 22.00] class: 1
+|   |   |--- OverTime >  0.50
+|   |   |   |--- weights: [2.00, 18.00] class: 1
+|   |--- Age >  33.50
+|   |   |--- JobSatisfaction <= 2.00
+|   |   |   |--- weights: [0.00, 1.00] class: 1
+|   |   |--- JobSatisfaction >  2.00
+|   |   |   |--- weights: [9.00, 0.00] class: 0
+|--- TotalWorkingYears >  1.50
+|   |--- OverTime <= 0.50
+|   |   |--- WorkLifeBalance <= 1.50
+|   |   |   |--- weights: [35.00, 12.00] class: 0
+|   |   |--- WorkLifeBalance >  1.50
+|   |   |   |--- weights: [681.00, 59.00] class: 0
+|   |--- OverTime >  0.50
+|   |   |--- MonthlyIncome <= 2476.00
+|   |   |   |--- weights: [16.00, 24.00] class: 1
+|   |   |--- MonthlyIncome >  2476.00
+|   |   |   |--- weights: [223.00, 54.00] class: 0

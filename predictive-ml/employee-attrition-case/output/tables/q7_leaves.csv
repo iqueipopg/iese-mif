@@ -1,0 +1,9 @@
+rule,n_train,attrition_rate,prediction
+TotalWorkingYears <= 1.5 AND Age > 33.5 AND JobSatisfaction <= 2.0,1,1.0,Leave
+TotalWorkingYears <= 1.5 AND Age <= 33.5 AND OverTime > 0.5,20,0.9,Leave
+TotalWorkingYears > 1.5 AND OverTime > 0.5 AND MonthlyIncome <= 2476.0,40,0.6,Leave
+TotalWorkingYears <= 1.5 AND Age <= 33.5 AND OverTime <= 0.5,42,0.5238095238095238,Leave
+TotalWorkingYears > 1.5 AND OverTime <= 0.5 AND WorkLifeBalance <= 1.5,47,0.2553191489361702,Stay
+TotalWorkingYears > 1.5 AND OverTime > 0.5 AND MonthlyIncome > 2476.0,277,0.19494584837545126,Stay
+TotalWorkingYears > 1.5 AND OverTime <= 0.5 AND WorkLifeBalance > 1.5,740,0.07972972972972973,Stay
+TotalWorkingYears <= 1.5 AND Age > 33.5 AND JobSatisfaction > 2.0,9,0.0,Stay

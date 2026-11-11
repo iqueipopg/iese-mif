@@ -1,0 +1,25 @@
+,std_coef
+EnvironmentSatisfaction,-0.4513946123492916
+TotalWorkingYears,-0.44271769198592686
+Age,-0.4210400141905586
+YearsWithCurrManager,-0.4190988075735823
+JobSatisfaction,-0.40767040693082723
+YearsInCurrentRole,-0.3688848455369857
+JobInvolvement,-0.3624603449429745
+RelationshipSatisfaction,-0.2856574760700925
+WorkLifeBalance,-0.27837391799750105
+StockOptionLevel,-0.22117765308025783
+MonthlyIncome,-0.20705570458365236
+Department_Research & Development,-0.20603931286413335
+MaritalStatus_Divorced,-0.13517574620698256
+JobLevel,-0.13121247292317362
+MaritalStatus_Married,-0.11392519811338364
+Department_Human Resources,0.08257343543505478
+YearsAtCompany,0.16856129913802329
+Department_Sales,0.177284499588997
+MaritalStatus_Single,0.24302437453996767
+DistanceFromHome,0.3459674637196137
+NumCompaniesWorked,0.4654208017469196
+BusinessTravel,0.505021725526663
+YearsSinceLastPromotion,0.5827169690027686
+OverTime,0.7843262908950959

@@ -1,0 +1,25 @@
+,importance
+TotalWorkingYears,0.2703364545709313
+OverTime,0.13242370391711075
+MonthlyIncome,0.11948613201826654
+Age,0.0922942289005108
+MaritalStatus_Single,0.060754465672575676
+NumCompaniesWorked,0.055331607889322516
+DistanceFromHome,0.048617630186947654
+BusinessTravel,0.043035414013030515
+Department_Sales,0.031985780685360544
+StockOptionLevel,0.025940393913543445
+EnvironmentSatisfaction,0.025887920814846865
+WorkLifeBalance,0.024364728283598366
+RelationshipSatisfaction,0.022522491108916843
+JobSatisfaction,0.01609357587744909
+YearsSinceLastPromotion,0.015678926579479384
+MaritalStatus_Divorced,0.01524654556810966
+YearsAtCompany,0.0
+JobLevel,0.0
+YearsWithCurrManager,0.0
+YearsInCurrentRole,0.0
+JobInvolvement,0.0
+MaritalStatus_Married,0.0
+Department_Human Resources,0.0
+Department_Research & Development,0.0
