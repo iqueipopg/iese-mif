@@ -10,6 +10,11 @@
 \usepackage{tcolorbox}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
 
 \setlist{nosep,leftmargin=*}
 \setlength{\parskip}{2.5pt}
@@ -34,16 +39,20 @@ caught, AUC 0.83 vs 0.67). Recommendation: score with the logit, lower the alarm
 and use a depth-3 tree to explain \emph{who} is at risk.
 \end{tcolorbox}
 
-\q{Q1--Q2. Data and variable types.} 35 columns: the target, 7 text (nominal: \texttt{Department}, \texttt{JobRole},
-\texttt{MaritalStatus}\dots; binary: \texttt{OverTime}, \texttt{Gender}), 9 integer codes that are really
-\emph{ordinal} categories (satisfaction 1--4, \texttt{Education}, \texttt{JobLevel}, \texttt{StockOptionLevel}),
-14 true numbers (income, age, years), and 4 useless ones dropped (3 constant, 1 ID). Strongest raw links:
-\texttt{JobRole} (Sales Representatives 40\% leave vs 2.5\% Research Directors), \texttt{OverTime} (31\% vs 10\%),
-\texttt{JobLevel}~1 (26\%), \texttt{Single} (26\%), low \texttt{JobInvolvement} (34\%); leavers are younger, earlier in
-their career and paid less (about 0.45 s.d. below stayers). \emph{Does the type matter for a tree?} Barely: a tree only
-asks ``is $x \le$ threshold?'', so an ordinal code works as a number. Text must be encoded: \texttt{OverTime} as 0/1,
-\texttt{BusinessTravel} as 0/1/2 (it has an order), \texttt{MaritalStatus} and \texttt{Department} one-hot (no order).
-20 features, 24 columns; stratified 80/20 split (1,176 / 294, 16\% leavers in both).
+\q{Q1. Attrition rate:} \hl{16.1\% (237 of 1,470).} \q{Categorical vs numeric:} \hl{7 text columns are categorical}
+(\texttt{Department}, \texttt{JobRole}, \texttt{MaritalStatus}, \texttt{BusinessTravel}, \texttt{EducationField},
+\texttt{Gender}, \texttt{OverTime}); the 26 integer columns look numeric. \q{Strongest visual relationship} (attrition
+rate by group; leaver vs stayer means): \hl{\texttt{JobRole} (Sales Reps 40\% vs Research Directors 2.5\%),
+\texttt{OverTime} (31\% vs 10\%), \texttt{JobLevel} 1 (26\%), \texttt{Single} (26\%), low \texttt{JobInvolvement}
+(34\%); leavers are younger, earlier in their career and paid less} (about 0.45 s.d. below stayers).
+
+\q{Q2. Types:} \hl{nominal text, binary text, ordinal integer codes (satisfaction 1--4, \texttt{Education},
+\texttt{JobLevel}, \texttt{StockOptionLevel}), true numbers (14), and 4 useless columns} (3 constant, 1 ID: drop).
+\q{Hidden?} \hl{Yes: the ordinal codes are categories with an order, not quantities.} \q{Treatment:} \hl{true numbers and
+ordinal codes as they are; binary as 0/1; nominal one-hot.} \q{Does a tree care?} \hl{Barely: it only asks whether
+$x \le$ a threshold, so only the order matters} (a logit would treat 4 as twice 2). Features: 20 on pay, overtime,
+career stage, satisfaction, family and department (24 columns after encoding). \hl{Stratified 80/20 split: 1,176 / 294,
+16\% leavers in both.}
 
 \vspace{2pt}
 \begin{minipage}[t]{0.40\linewidth}\vspace{0pt}
@@ -51,15 +60,15 @@ asks ``is $x \le$ threshold?'', so an ordinal code works as a number. Text must 
 \end{minipage}\hfill
 \begin{minipage}[t]{0.57\linewidth}\vspace{0pt}
 \q{Q3. Depth.} Train accuracy rises to 100\% with no limit (151 leaves: it memorises). Test accuracy peaks at
-\textbf{depth 5 (84.7\%)} and falls from there: overfitting starts after 5. But the curve is flat between 2 and 5,
+\hl{depth 5 (84.7\%) and falls from there: overfitting starts after 5.} But the curve is flat between 2 and 5,
 and redoing the split with 50 seeds, depth 2 or 3 wins 34 times and depth 5 only 8: ``5'' is partly luck of this split.
 
-\q{Q4. Cross-validation (depth 5).} Folds 82.3--85.7\%, mean \textbf{84.1\%}, s.d. \textbf{1.3 pp}. Slightly below
-the single test score (84.7\%), which was the lucky draw we picked the depth on. The s.d. is small, so the model is
-stable, but 1.3 pp is six times its edge over ``always Stay'' (83.9\%, a 0.2 pp gap).
+\q{Q4. Cross-validation (depth 5).} Folds 82.3--85.7\%, \hl{mean 84.1\%, s.d. 1.3 pp.} Slightly below
+the single test score (84.7\%), which was the lucky draw we picked the depth on. \hl{The s.d. is small, so the model is
+stable,} but 1.3 pp is six times its edge over ``always Stay'' (83.9\%, a 0.2 pp gap).
 
-\q{Q6. Importances.} \texttt{TotalWorkingYears} 0.27, \texttt{OverTime} 0.13, \texttt{MonthlyIncome} 0.12,
-\texttt{Age} 0.09, \texttt{Single} 0.06. Matches intuition (early career, overworked, underpaid). Satisfaction scores
+\q{Q6. Importances.} \hl{\texttt{TotalWorkingYears} 0.27, \texttt{OverTime} 0.13, \texttt{MonthlyIncome} 0.12,
+\texttt{Age} 0.09, \texttt{Single} 0.06. Matches intuition (early career, overworked, underpaid).} Satisfaction scores
 matter little in the tree but a lot in the logit: the tree uses a few strong splits, the logit adds up many small effects.
 \end{minipage}
 
@@ -72,31 +81,31 @@ matter little in the tree but a lot in the logit: the tree uses a few strong spl
  & TP & FN & FP & TN & Accuracy & TP rate (recall) & FP rate & AUC\\
 \midrule
 Always ``Stay'' & 0 & 47 & 0 & 247 & 84.0\% & 0\% & 0\% & 0.50\\
-Tree, depth 5 & 16 & 31 & 14 & 233 & 84.7\% & 34.0\% & 5.7\% & 0.67\\
+Tree, depth 5 & 16 & 31 & 14 & 233 & 84.7\% & \hl{34.0\%} & \hl{5.7\%} & 0.67\\
 Logistic regression & 19 & 28 & 8 & 239 & \textbf{87.8\%} & 40.4\% & \textbf{3.2\%} & \textbf{0.83}\\
 Logit, alarm at 25\% & 32 & 15 & 36 & 211 & 82.7\% & \textbf{68.1\%} & 14.6\% & 0.83\\
 \bottomrule
 \end{tabular}}
 
 \vspace{2pt}
-\emph{HR reading.} A \textbf{false negative} is a leaver we missed: replacing them costs 50--200\% of a salary. A
+\emph{HR reading.} \hl{A \textbf{false negative} is a leaver we missed: replacing them costs 50--200\% of a salary. A
 \textbf{false positive} is a stayer we flagged: the cost is a retention conversation or bonus spent on someone who was not
-leaving. Missing a leaver is far more expensive, so accuracy at the default 50\% cut-off is the wrong target: the tree
+leaving. Missing a leaver is far more expensive,} so accuracy at the default 50\% cut-off is the wrong target: the tree
 misses 2 of every 3 leavers. Lowering the alarm trades cheap false positives for expensive false negatives.
 
 \vspace{2pt}
-\includegraphics[width=\linewidth,trim=0 15 0 25,clip]{\figdir/q7_tree_depth3.png}
+\centerline{\includegraphics[width=0.86\linewidth,trim=0 15 0 25,clip]{\figdir/q7_tree_depth3.png}}
 
 \q{Q7. Business rules (depth-3 tree).} Each box: share of employees, [stay, leave] proportions.
 \begin{enumerate}[label=\arabic*.]
-\item \textbf{If} total working years $\le$ 1 \textbf{and} age $\le$ 33 \textbf{and} overtime: \textbf{90\% leave} (20 people).
-\item \textbf{If} more than 1 year of experience \textbf{and} overtime \textbf{and} monthly income $\le$ \$2,476: \textbf{60\% leave} (40 people).
-\item \textbf{If} more than 1 year of experience, no overtime and work-life balance not ``Bad'': \textbf{8\% leave} --- the safe
+\item \hl{\textbf{If} total working years $\le$ 1 \textbf{and} age $\le$ 33 \textbf{and} overtime: \textbf{90\% leave}} (20 people).
+\item \hl{\textbf{If} more than 1 year of experience \textbf{and} overtime \textbf{and} monthly income $\le$ \$2,476: \textbf{60\% leave}} (40 people).
+\item \hl{\textbf{If} more than 1 year of experience, no overtime and work-life balance above Bad: \textbf{8\% leave}} --- the safe
 63\% of the workforce. (One leaf holds a single employee: that is noise, not a rule.)
 \end{enumerate}
 
-\q{Q8. Recommendation.} Use the \textbf{logistic regression} to score everyone: higher accuracy, more leavers caught,
-fewer false alarms, and it ranks risk much better (AUC 0.83). With the alarm at 25\% HR reaches 68\% of leavers. Use
-the \textbf{depth-3 tree} to explain the drivers in a meeting (overtime, first job, low pay); a tree deep enough to compete
+\q{Q8. Recommendation.} \hl{Use the \textbf{logistic regression} to score everyone: higher accuracy, more leavers caught,
+fewer false alarms, and it ranks risk much better (AUC 0.83).} With the alarm at 25\% HR reaches 68\% of leavers. \hl{Use
+the \textbf{depth-3 tree} to explain the drivers in a meeting (overtime, first job, low pay);} a tree deep enough to compete
 is 24 leaves and no longer readable.
 \end{document}
