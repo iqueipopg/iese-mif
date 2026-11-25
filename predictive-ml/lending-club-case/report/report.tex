@@ -1,0 +1,115 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.2pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Lending Club: who gets the loan? Trees, Random Forest and XGBoost}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 18 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} Approving everybody in 2011 gives a 15.8\% default rate. Declining the riskiest 20\% by
+\textbf{XGBoost} brings the approved book to \textbf{11.8\%} and expected losses from \$12.3M to \$8.3M per \$100M lent,
+better than a single tree (12.6\%) and than Lending Club's own sub-grade (12.4\%), using only application-day data. The
+price: 2,831 good borrowers turned away to avoid 1,311 defaults. A model fed repayment columns scores 0.5\%: that is
+leakage, not skill. Recommendation: XGBoost at 80\% approval, explained applicant by applicant with SHAP.
+\end{tcolorbox}
+
+\q{Q1. Data.} \hl{38,770 loans with a known outcome, 14.5\% default} (train to Dec-2010: 18,062, 13.1\%; test 2011:
+20,708, 15.8\%). \hl{Riskiest groups: 60-month term 24.9\% (vs 11.1\% at 36), small business 27.0\%, utilisation in the top
+fifth 19.8\%, 3 inquiries 20.7\%, income in the bottom fifth 18.2\%, loans above \$16k 18.6\%.} No single column separates
+defaulters: the best group is still 1 in 4.
+
+\q{Q2. Naive policies.} \hl{Approve all: 15.8\%. Decline 20\% at random: 15.8\% on average} (a smaller book, same
+quality). ``Always repays'' is 84.2\% accurate and declines nobody: \hl{accuracy ignores the decision.} \hl{With a 0.5
+cut-off XGBoost would decline only 0.25\% of 2011 applicants;} the policy's cut-off sits at a predicted default of
+19.6\%. The threshold must come from the policy (the 80th percentile of risk), not from 0.5.
+
+\q{Q3. Leakage.} With five post-loan columns the depth-6 tree reaches \hl{0.48\% (AUC 0.99); \texttt{recoveries} takes
+74\% of the importance.} Recoveries exist only after a charge-off: the model reads the outcome. \hl{Known at application:
+request, applicant and credit-bureau columns. Lending Club's decision: \texttt{grade}, \texttt{sub\_grade},
+\texttt{int\_rate}, \texttt{installment}, funded amounts. Only after issue: payments, recoveries, \texttt{last\_*},
+\texttt{loan\_status}} (remove). Grade and rate are known on the day, but they \emph{are} another model's output: we
+leave them out to build an independent second opinion and use the sub-grade as the benchmark to beat.
+
+\vspace{2pt}
+\centerline{\includegraphics[width=0.92\linewidth]{\figdir/q4_q6_overfitting_knobs.png}}
+
+\q{Q4. Clean tree.} \hl{Depth 6: 12.6\%.} First splits: 60-month term, then small-business purpose and income
+below \$27k, then inquiries and utilisation: credit sense.
+\hl{Deeper, train keeps falling while test bottoms out at depth 7 (12.5\%) and rises; unconstrained: 2,393 leaves, 0.0\% on
+its own loans, 14.6\% in 2011.} It memorises each borrower.
+
+\q{Q5. Random Forest} (bagging: each tree on a bootstrap sample, $\sqrt{p}$ features per split, average the votes).
+\hl{300 trees, depth 10: 12.0\% test.} Adding trees never hurts test (along each row below); OOB 10.2\% measures fit on
+unseen 2007--2010 loans, \hl{but cannot detect that 2011 is a different, riskier year} (train 5.1\%, test 12.0\%).
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lcccc|cccc}
+\toprule
+ & \multicolumn{4}{c|}{Train (trees: 5, 25, 100, 300)} & \multicolumn{4}{c}{Test 2011 (trees: 5, 25, 100, 300)}\\
+\midrule
+depth 3 & 11.1 & 10.1 & 9.9 & 10.0 & 12.9 & 11.8 & 11.8 & 11.8\\
+depth 6 & 9.7 & 8.8 & 8.8 & 8.7 & 12.3 & 11.8 & 11.8 & 11.7\\
+depth 10 & 7.0 & 5.5 & 5.1 & 5.1 & 13.0 & 12.3 & 12.0 & 12.0\\
+depth 15 & 3.6 & 1.3 & 0.5 & \hl{0.4} & 13.7 & 12.7 & 12.5 & \hl{12.3}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{1pt}
+\hl{Depth drives overfitting (down a column, train collapses, test worsens); trees only remove noise (along a row, both
+improve).}
+
+\q{Q6. XGBoost} (boosting: shallow trees in sequence, each fitting the errors of the ones before). Early stopping on
+2010 H2: \hl{0.3 $\to$ 20 trees (12.1\%), 0.1 $\to$ 99 (11.8\%), 0.03 $\to$ 343 (11.7\%).} \hl{Boosting does overfit with
+rounds:} test 11.8\% at about 100 rounds, 13.1\% at 2,000, while train falls to 2.0\%.
+
+\q{Q7. Committee view} (2011, approve 80\%, LGD 70\%):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrr}
+\toprule
+ & Default rate approved & Loss per \$100M & Defaults declined (TP) & Good declined (FP)\\
+\midrule
+Approve everybody & 15.8\% & \$12.3M & 0 & 0\\
+Tree, depth 6 & 12.6\% & \$9.4M & 1,183 & 2,959\\
+Lending Club sub-grade & 12.4\% & \$8.9M & 1,203 & 2,939\\
+Random Forest & 12.0\% & \$8.5M & 1,278 & 2,864\\
+XGBoost & \hl{\textbf{11.8\%}} & \hl{\textbf{\$8.3M}} & \textbf{1,311} & \textbf{2,831}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{1pt}
+The default-vs-approval curve (\texttt{q7\_default\_vs\_approval.png}) falls as fewer are approved: a smaller book is
+cleaner, but every extra decline also turns away good borrowers, and the interest income with them.
+
+\q{Q8. SHAP.} \hl{Drivers: \texttt{revol\_util}, term, inquiries, income, loan-to-income.} The riskiest applicant
+(predicted 70\%): \hl{5 inquiries in six months, a small-business loan of half their income, 60 months.} A lender needs
+reasons per applicant: adverse-action notices, fair-lending audits and a credit officer's trust.
+
+\q{Q9. Pricing.} Predicting \texttt{int\_rate}: \hl{XGBoost MAE 2.13 pts, RMSE 2.59; RF 2.29 / 2.78; naive mean 3.40 /
+4.14.} Not perfect: the grade uses more than these columns, and rates moved (mean 11.79\% train, 12.08\% in 2011).
+\end{document}
