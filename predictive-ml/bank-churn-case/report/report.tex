@@ -1,0 +1,109 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Who is about to leave the bank? SVMs for a retention call list}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 19 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} Churn is not monotonic: it peaks at ages 51--60 and is lowest with two products, near-certain
+with three or four. A straight boundary cannot capture that, so \textbf{the RBF SVM builds the best call list}: 231 of
+the 300 called test customers are leavers (77\% precision), against 162 for a logistic regression and about 61 at
+random. SVM scores are not probabilities; after Platt calibration the bank can rank by \emph{deposits at risk}, which
+reaches fewer leavers (204) but more of their money (44\% vs 38\%). Recommendation: RBF SVM, calibrated, and give the
+team the deposits list for value, with the reminder that it skips the 36\% of customers who hold no balance.
+\end{tcolorbox}
+
+\q{Q1. Patterns} (share who left, 10,000 customers, 20.4\% overall). \hl{Age has a hump: 7.5\% at 18--30, 34\% at
+41--50, \textbf{56\% at 51--60}, back to 8\% over 70. Products form a U: 28\% with one, \textbf{7.6\% with two}, 83\% with
+three, 100\% with four.} Country and activity go one way: Germany 32\% vs 16--17\% elsewhere; inactive 27\% vs active
+14\%. \hl{A straight boundary can only say ``older is riskier'' and ``more products is riskier'': it misses both shapes.}
+
+\vspace{2pt}
+\centerline{\includegraphics[width=0.86\linewidth]{\figdir/q2_call_zones_two_features.png}}
+
+\q{Q2. Age and products only} (test, call list of 300). \hl{Logit reaches 120 leavers, RBF 203.} The logit can only draw a
+line, so it calls everyone over roughly 55--60 whatever they hold, spending calls on two-product customers and the
+over-70s, who rarely leave. \hl{The RBF calls two islands: customers with 3--4 products of any age up to about 70, and
+one-product customers aged roughly 47--61.} Those are the two segments to target.
+
+\q{Q3. All features} (call list = top 10\% by score; random list reaches 61 of 611 test leavers):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrrr}
+\toprule
+ & \multicolumn{3}{c}{Train (700 called)} & \multicolumn{3}{c}{Test (300 called)}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Model & Leavers & Precision & Recall & Leavers & Precision & Recall\\
+\midrule
+Logistic regression & 394 & 56.3\% & 27.6\% & 162 & 54.0\% & 26.5\%\\
+SVM, linear & 347 & 49.6\% & 24.3\% & 162 & 54.0\% & 26.5\%\\
+SVM, polynomial degree 2 & 533 & 76.1\% & 37.4\% & 222 & 74.0\% & 36.3\%\\
+SVM, RBF & 591 & 84.4\% & 41.4\% & \hl{\textbf{231}} & \hl{\textbf{77.0\%}} & \textbf{37.8\%}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{3pt}
+\begin{minipage}[t]{0.50\linewidth}\vspace{0pt}
+\q{Q4. C and gamma} (call-list recall, train / test):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lccc}
+\toprule
+C $\backslash$ gamma & 0.01 & 0.1 & 1\\
+\midrule
+0.1 & 39.8 / 38.0 & 40.2 / 37.6 & 46.9 / 30.6\\
+1 & 39.7 / 38.0 & 41.2 / 38.0 & 48.5 / 31.6\\
+10 & 39.8 / 38.0 & 44.5 / 37.6 & \hl{49.1 / 26.0}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\textbf{gamma} sets how local each customer's influence is (large gamma = a wiggly boundary around single customers);
+\textbf{C} sets how much training errors are punished (large C = less smoothing). \hl{gamma = 1 overfits at every C,
+worst with C = 10}; gamma 0.01--0.1 generalises.
+
+\q{Q5. Does curvature pay?} \hl{Yes: +69 leavers (231 vs 162) for the same 300 calls,} because the risk sits in a hump
+and a U. Linear SVM = logit here. \hl{Recommend the RBF SVM} (C = 1, default gamma), with the train-test gap monitored.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.46\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q6_calibration.png}
+
+\q{Q6. Calibration.} \hl{Logistic of the RBF score averages 30.1\% vs 20.4\% real; Platt scaling: 19.7\%.} The raw
+transform overstates risk. \hl{The call lists overlap 99\%: calibration is monotonic, so it changes the probabilities,
+not the order.}
+\end{minipage}
+
+\vspace{3pt}
+\q{Q7. Probability or deposits at risk?} With calibrated probabilities: \hl{ranked by probability, the list reaches 230
+leavers and 37.5\% of the leavers' deposits; ranked by probability $\times$ balance, 204 leavers but \textbf{44.5\%} of
+their deposits.} The deposits list never calls the 36\% of customers with a zero balance (the probability list calls 70
+of them). \hl{Give the team the deposits list if the goal is money retained,} but keep in mind that zero-balance customers
+may still be worth keeping (cards, future salary), that it depends on calibration being right, and that an offer to a
+rich customer costs more.
+\end{document}
