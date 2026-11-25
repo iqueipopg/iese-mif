@@ -1,0 +1,99 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Predicting credit card churn with K-Nearest Neighbours}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 18 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} 16.1\% of the 10,127 cardholders closed their account, so ``nobody leaves'' is 84\% accurate.
+KNN only works once distances mean something: unscaled it scores 89.1\% \emph{by accident}, because three dollar columns
+make up 99.6\% of the distance and happen to be predictive. The right pipeline (scale the numbers, one-hot the
+categories, $k=7$ by cross-validation) reaches 90.5\% accuracy, 83\% precision and AUC 0.91. For a retention campaign,
+recall matters more: with the alarm at a 20\% churn probability the model catches 81\% of churners, two in three alarms
+being right.
+\end{tcolorbox}
+
+\q{Q1. Data.} \hl{10,127 customers, 23 columns; 16.07\% churn (1,627).} Dropped the two
+\texttt{Naive\_Bayes\_Classifier} columns (predictions built with the target: leakage) and the ID. \hl{14 numeric, 5
+categorical} (\texttt{Gender}, \texttt{Education\_Level}, \texttt{Marital\_Status}, \texttt{Income\_Category},
+\texttt{Card\_Category}); 37 columns after \texttt{get\_dummies}. Stratified 80/20 split: 8,101 / 2,026.
+
+\q{Q2. KNN, $k=5$, raw data:} \hl{89.1\% accuracy, recall 55\%.} It beats the 84\% baseline, but for the wrong reason (Q3).
+
+\q{Q3. Scale.} \hl{The \texttt{Credit\_Limit} range (33,078) is 33,111 times that of \texttt{Avg\_Utilization\_Ratio}
+(0.999).} Euclidean distance adds squared gaps, so \hl{\texttt{Credit\_Limit} and \texttt{Avg\_Open\_To\_Buy} take 93\%
+of it}: KNN is really a ``similar credit line'' rule and ignores ratios, counts and dummies.
+
+\q{Q4. Scaling.} StandardScaler: $(x-\mu)/\sigma$; MinMaxScaler: $(x-\min)/(\max-\min)$, which an outlier squashes.
+\hl{Scaling all 37 columns makes things worse: 85.8\% (recall 22\%).} The dummies are the problem: a Platinum card
+(rare) becomes 21.8 s.d. when it is 1, so one rare category dominates the distance. \hl{For KNN: StandardScaler on the
+numeric columns only, dummies left as 0/1.}
+
+\vspace{2pt}
+\begin{minipage}[t]{0.46\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q5_accuracy_vs_k.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.51\linewidth}\vspace{0pt}
+\q{Q5. Choosing $k$} (5-fold CV, pipeline). \hl{$k=3$ overfits: 94.8\% train vs 90.7\% validation.} The gap closes
+as $k$ grows; \hl{from $k=21$ both lines fall together: underfitting} (51 neighbours average away the signal).
+\hl{Best $k=7$: 91.1\% validation.} The curve is flat between 5 and 15, so the exact $k$ matters little.
+
+\q{Q7. Curse of dimensionality.} In high dimensions all points are almost equally far apart, so the ``nearest''
+neighbour is barely nearer than the rest. Uniform simulation: \hl{nearest/farthest distance ratio 0.01 in 2 dimensions,
+0.52 in 37.} Remedies: fewer, better features (dropping the 23 dummies gives 91.2\%, the best model), PCA, feature
+weighting, or a model that selects features (trees).
+\end{minipage}
+
+\vspace{3pt}
+\q{Q6. Best model and threshold} (test set, 2,026 customers, 325 churners):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrrrr}
+\toprule
+ & TP & FN & FP & TN & Accuracy & Recall & Precision\\
+\midrule
+Always ``stays'' & 0 & 325 & 0 & 1,701 & 84.0\% & 0\% & --\\
+KNN $k=5$, unscaled & 179 & 146 & 75 & 1,626 & 89.1\% & 55.1\% & 70.5\%\\
+KNN $k=5$, StandardScaler on all columns & 71 & 254 & 33 & 1,668 & 85.8\% & 21.8\% & 68.3\%\\
+Pipeline $k=7$, cut-off 50\% & 167 & 158 & 35 & 1,666 & 90.5\% & 51.4\% & \textbf{82.7\%}\\
+Pipeline $k=7$, cut-off 20\% & 263 & 62 & 143 & 1,558 & 89.9\% & \hl{\textbf{80.9\%}} & 64.8\%\\
+Numeric columns only, $k=11$ & 185 & 140 & 39 & 1,662 & \textbf{91.2\%} & 56.9\% & 82.6\%\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\emph{Business reading.} \hl{Recall matters more:} a missed churner is a lost customer worth five to seven
+acquisitions; a false alarm is a retention offer to someone who was staying. With $k=7$ the share of churning neighbours
+can only take values in sevenths, so the 20\% cut-off means ``2 of 7 neighbours left''.
+
+\q{Q8. Pipeline.} \hl{\texttt{ColumnTransformer} (scale numeric, one-hot categorical) + KNN, fitted on the raw training
+data, gives exactly the same test predictions as the manual steps.} It is better because the scaler is learnt inside each
+CV fold (no test information leaks into $\mu$, $\sigma$), the same object transforms new customers in production, and
+the whole thing can be tuned and saved as one model.
+\end{document}

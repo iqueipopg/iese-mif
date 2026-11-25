@@ -1,0 +1,15 @@
+,min,max,range
+Avg_Open_To_Buy,3.0,34516.0,34513.0
+Credit_Limit,1438.3,34516.0,33077.7
+Total_Trans_Amt,510.0,18484.0,17974.0
+Total_Revolving_Bal,0.0,2517.0,2517.0
+Total_Trans_Ct,10.0,139.0,129.0
+Customer_Age,26.0,73.0,47.0
+Months_on_book,13.0,56.0,43.0
+Contacts_Count_12_mon,0.0,6.0,6.0
+Months_Inactive_12_mon,0.0,6.0,6.0
+Dependent_count,0.0,5.0,5.0
+Total_Relationship_Count,1.0,6.0,5.0
+Total_Ct_Chng_Q4_Q1,0.0,3.714,3.714
+Total_Amt_Chng_Q4_Q1,0.0,3.397,3.397
+Avg_Utilization_Ratio,0.0,0.999,0.999
