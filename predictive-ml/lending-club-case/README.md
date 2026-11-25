@@ -34,7 +34,7 @@ tree that also sees the repayment columns gets 0.5%, which is leakage, not skill
 - Smaller learning rates need more trees for a slightly better result: 20 trees at 0.3 (12.1%), 99 at 0.1 (11.8%),
   343 at 0.03 (11.7%).
 - SHAP drivers: revolving utilisation, term, credit inquiries, income and loan-to-income. The riskiest 2011 applicant
-  (predicted 70% default) had 5 inquiries in six months, a small-business loan worth half their income, on 60 months.
+  (predicted 69.5% default) had 5 inquiries in six months, a small-business loan worth half their income, on 60 months.
 - Reverse-engineering Lending Club's interest rate from application data: XGBoost MAE 2.13 points against 3.40 for the
   training mean. Not perfectly, because the grade draws on more than these columns and because the rate grid moved
   over time (average rate 11.79% in the training years, 12.08% in 2011).

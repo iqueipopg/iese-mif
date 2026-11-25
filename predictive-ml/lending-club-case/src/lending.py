@@ -315,7 +315,7 @@ pd.DataFrame({"value": X_te.iloc[worst][contrib.index], "shap": contrib}).to_csv
 print(f"   Riskiest test applicant: predicted default {p_xgb[worst]:.1%}; top reasons:",
       ", ".join(f"{k}={X_te.iloc[worst][k]:g} ({v:+.2f})" for k, v in contrib.head(4).items()))
 
-fig, axes = plt.subplots(1, 2, figsize=(7.6, 2.8), gridspec_kw={"wspace": 0.9})
+fig, axes = plt.subplots(1, 2, figsize=(8.4, 2.9))
 top = mean_abs.head(10)[::-1]
 axes[0].barh(top.index, top.values, color=BLUE)
 axes[0].set_xlabel("Mean |SHAP| (log-odds)")
