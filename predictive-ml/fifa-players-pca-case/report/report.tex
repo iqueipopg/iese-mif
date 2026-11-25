@@ -1,0 +1,105 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{FIFA 22 players: dimensionality reduction with PCA}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 19 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} 35 skill ratings hold about \textbf{four} independent dimensions: 4 components explain 80\% of the
+variance and 10 explain 90\%. The first three read like a scout's notes: \emph{overall technical and attacking quality}
+(41\%), \emph{defender vs fast finisher} (23\%), \emph{light and quick vs big and strong} (10\%). Positions cluster on
+their own in that space even though PCA never saw them, and the nearest players to Messi are Neymar, Mbappé, Dybala and
+Salah. For prediction, PCs trade a little accuracy (77\% with 4 PCs vs 87\% with 35 skills) for a much simpler model.
+\end{tcolorbox}
+
+\q{Q1--Q2. Data.} \hl{19,239 players, 110 columns. 35 skills} (6 summary ratings + 29 detailed attributes).
+\hl{2,132 goalkeepers removed: 17,107 outfield players,} no missing skill values.
+
+\q{Q3. Raw scales.} \texttt{pace} mean 68.2 (s.d. 10.9), \texttt{shooting} 52.3 (14.1), \texttt{defending} 51.7 (16.2);
+s.d. runs from 8.7 (\texttt{reactions}) to 18.5 (\texttt{standing\_tackle}). \hl{PCA maximises variance, so unscaled it
+would chase the most dispersed skills} (the defensive ones), not the most informative.
+\q{Q4.} After StandardScaler every skill has mean $\approx 0$ (largest $6\times10^{-16}$) and s.d.\ 1.000.
+
+\vspace{2pt}
+\begin{minipage}[t]{0.44\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q6_scree.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.53\linewidth}\vspace{0pt}
+\q{Q5. PCA.} 35 components (one per skill). \hl{PC1 40.6\%, PC2 23.2\%, PC3 10.1\%.}
+
+\q{Q6. Scree.} \hl{70\% needs 3 components, 80\% needs 4, 90\% needs 10.} The elbow is after PC3: the curve flattens and
+each extra component adds less and less.
+
+\q{Q7. PC1 = overall technical and attacking quality.} \hl{Highest loadings: \texttt{dribbling} 0.25,
+\texttt{skill\_dribbling} 0.24, \texttt{shooting} 0.24, \texttt{long\_shots} 0.23, \texttt{ball\_control} 0.23.}
+Negatives are tiny (defending $-0.07$): almost every skill loads positively, so PC1 is ``how good with the ball''.
+\end{minipage}
+
+\q{Q8. PC2 = defender (+) vs fast finisher ($-$).} \hl{+: \texttt{defending} 0.32, \texttt{interceptions},
+\texttt{marking\_awareness}, tackles (0.29--0.31); $-$: \texttt{acceleration} $-0.13$, \texttt{pace}, \texttt{sprint\_speed},
+\texttt{finishing}.} \q{PC3 = light and quick (+) vs big and strong ($-$):} \hl{+: \texttt{acceleration},
+\texttt{balance} 0.30, \texttt{pace}, \texttt{agility}; $-$: \texttt{heading\_accuracy}, \texttt{strength} $-0.29$,
+\texttt{penalties}, \texttt{shot\_power}.}
+
+\vspace{2pt}
+\begin{minipage}[t]{0.56\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q9_q10_players_pc1_pc2.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.41\linewidth}\vspace{0pt}
+\q{Q9. Positions cluster.} Centroids (PC1, PC2): \hl{CB ($-4.6$, 2.2), CDM ($-0.1$, 2.3), CM (1.6, 1.1),
+ST (1.5, $-2.6$), RW (2.3, $-3.0$).} Centre-backs top-left, wingers and strikers bottom, midfielders in between: the
+PCs recover the pitch.
+
+\q{Q10. Stars.} \hl{Messi has the highest PC1 of the group (13.4),} then Neymar 12.3 and Ronaldo 11.7. Van Dijk and
+Ramos top PC2 (7.7): elite defenders. Kanté (5.8, 6.7) and De Bruyne (11.4, 4.7) sit higher on PC2 than the forwards:
+both defend as well as create. It matches intuition.
+\end{minipage}
+
+\vspace{3pt}
+\q{Q11. 35 skills or a few PCs?} Logistic regression for the position group (5 classes), 5-fold CV:
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lccccc}
+\toprule
+Features & first 2 PCs & first 3 PCs & first 4 PCs & first 10 PCs & all 35 skills\\
+\midrule
+CV accuracy & 57.2\% & 73.6\% & \hl{77.4\%} & 84.8\% & \textbf{87.0\%}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+PCs remove collinearity, reduce noise and make a small model easy to plot and explain; but PCA keeps the directions of
+\emph{largest variance}, not the most predictive ones, and each PC mixes every skill. \hl{For pure accuracy use the 35
+skills (or ~10 PCs); for a compact, stable, explainable model, 3--4 PCs.}
+
+\q{Q12. Who is most like Messi?} Euclidean distance in PC space.
+\hl{3 PCs: Neymar 1.57, Mbappé 1.90, Dybala 2.34, Salah 2.58, Son 2.79, Cristiano Ronaldo 2.94.} With 4 PCs Mbappé and
+Ronaldo leave the top eight; Neymar, Dybala, Son, Hazard and Di María remain or come in. \hl{It makes football sense:
+small, quick, technical attackers who dribble and create.} The ranking depends on how many PCs we keep.
+\end{document}
