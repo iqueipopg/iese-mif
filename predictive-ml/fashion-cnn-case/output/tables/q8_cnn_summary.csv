@@ -1,0 +1,8 @@
+layer,output,params
+Conv2D,"(26, 26, 32)",320
+MaxPooling2D,"(13, 13, 32)",0
+Conv2D,"(11, 11, 64)",18496
+MaxPooling2D,"(5, 5, 64)",0
+Flatten,"(1600,)",0
+Dense,"(64,)",102464
+Dense,"(10,)",650

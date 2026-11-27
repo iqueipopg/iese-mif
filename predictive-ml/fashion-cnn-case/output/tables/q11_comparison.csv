@@ -1,0 +1,4 @@
+model,params,epochs,train_acc,test_acc,cpu_seconds
+Dense 784-32-32-10,26506,10,0.8932,0.8626,43.2
+"CNN (case), 5 epochs",121930,5,0.9255,0.8998,124.8
+"Deeper CNN (2 conv blocks + BN + dropout), 12 epochs",468586,12,0.9534,0.9259,809.8

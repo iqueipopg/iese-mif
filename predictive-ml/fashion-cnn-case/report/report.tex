@@ -1,0 +1,129 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Does respecting the image pay? Convolutional networks on Fashion-MNIST}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 27 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} Keeping the 2-D structure pays: \textbf{the case's CNN reaches 90.0\% in 5 epochs against
+86.3\% for a dense network}, over a quarter fewer errors, and a deeper CNN with batch normalisation and dropout
+reaches \textbf{92.6\%}. The price is compute (125 s and 810 s on CPU against 43 s). What is left is mostly shirts,
+63\% right, confused with T-shirts, pullovers and coats that a person would also hesitate over: the ceiling now is
+the 28 $\times$ 28 grey image, not the model.
+\end{tcolorbox}
+
+\begin{minipage}[t]{0.50\linewidth}\vspace{0pt}
+\q{Q1. The data.} Same images as this morning: (60000, 28, 28) and (10000, 28, 28), pixels 0--255 (divided by 255).
+\hl{Tops (T-shirt, shirt, pullover, coat) are the hard ones.}
+
+\q{Q2. Dense baseline} 784 $\to$ 32 $\to$ 32 $\to$ 10, 10 epochs: \hl{test 86.3\%}, 26,506 parameters (the same as
+the scikit-learn (32, 32), which reached 87.2\% in 60 epochs).
+
+\q{Q3. Running fit() again.}
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrr}
+\toprule
+Calls to fit() & Train & Test\\
+\midrule
+1 (epochs 1--10) & 89.3\% & 86.3\%\\
+2 (epochs 11--20) & 90.5\% & 86.7\%\\
+3 (epochs 21--30) & 91.2\% & 86.8\%\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\hl{Keras keeps the weights and continues training; scikit-learn's fit() starts again} (unless \texttt{warm\_start}).
+Train keeps rising and test stalls: overfitting builds up with each call.
+
+\q{Q4. Shape (28, 28, 1).} A convolution needs the grid to know which pixels are neighbours; the last 1 is the
+channel (grey; a colour photo would have 3).
+
+\q{Q6. 3$\times$3 filters} learn edges (vertical, horizontal, diagonal), corners and textures (knit, stripes). Many
+filters look for many patterns at once; the second layer combines them into parts (a collar, a sole).
+
+\q{Q7. Max pooling} keeps the strongest response in each 2$\times$2 block, so a pattern shifted by a pixel gives the
+same output: \hl{a sneaker is a sneaker wherever it sits in the frame}. It also quarters the grid.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}
+\q{Q5, Q8. The case's CNN} (\texttt{model.summary()}):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{llr}
+\toprule
+Layer & Output & Parameters\\
+\midrule
+Conv2D 32, 3$\times$3 & 26$\times$26$\times$32 & 320\\
+MaxPooling 2$\times$2 & 13$\times$13$\times$32 & 0\\
+Conv2D 64, 3$\times$3 & 11$\times$11$\times$64 & 18,496\\
+MaxPooling 2$\times$2 & 5$\times$5$\times$64 & 0\\
+Flatten, Dense 64 & 64 & 102,464\\
+Dense 10, softmax & 10 & 650\\
+\midrule
+Total & & \hl{\textbf{121,930}}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+4.6 times the dense network. \hl{Weight sharing makes 32 filters cost 320 parameters; 84\% sit in the first dense
+layer.}
+
+\q{Q9. Five epochs.} Validation 87.3\% $\to$ 88.7 $\to$ 88.9 $\to$ 89.9 $\to$ 90.4\%; \hl{test 90.0\% vs 86.3\%
+dense: +3.7 points, 27\% fewer errors}, in 125 s.
+
+\includegraphics[width=\linewidth]{\figdir/q10_misclassified.png}
+
+\q{Q10. Mistakes} (1,002). \hl{Shirt 62.9\%}, coat 81.8\%, T-shirt 86.6\%; sneaker 98.4\%, bag 97.8\%. Most errors
+are tops at low resolution that a person would also hesitate over.
+\end{minipage}
+
+\vspace{3pt}
+\q{Q11. Challenge: beat 90\%.}
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrr}
+\toprule
+Model & Parameters & Epochs & Train & Test & CPU\\
+\midrule
+Dense 784-32-32-10 & 26,506 & 10 & 89.3\% & 86.3\% & 43 s\\
+CNN of the case & 121,930 & 5 & 92.6\% & 90.0\% & 125 s\\
+2 $\times$ [conv 3$\times$3, BN, conv 3$\times$3, BN, pool, dropout 0.25], dense 128, dropout 0.4 & 468,586 & 12 &
+95.3\% & \hl{\textbf{92.6\%}} & 810 s\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+Two convolutions per stage see larger patterns before pooling; batch normalisation keeps each layer's inputs on a
+stable scale (the morning's normalisation lesson, inside the network); dropout fights the overfitting of Q3.
+
+\q{Q12. The journey.} \hl{Raw pixels failed because 0--255 inputs swamp small starting weights (31.6\%). Normalising
+let the network learn (87\%). The CNN wins because it uses the image's structure: local filters, shared weights and
+pooling (90.0\%, 92.6\% deeper).} The same idea, building the structure of the data into the model, gives sequence
+models for time series and transformers for text.
+\end{document}
