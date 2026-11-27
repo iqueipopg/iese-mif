@@ -1,0 +1,131 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Catching card fraud without labels: Isolation Forest, then Random Forest and XGBoost}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 26 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} Without labels the Isolation Forest is worth running: its 100 strangest day-2 transactions hold
+27 frauds against 0.15 at random, and \textbf{reviewing about 2,000 alerts a day cuts the cost from EUR 105.5k to
+EUR 60.8k}. It pays most when the review is cheap and automatic (an SMS, a 3-D Secure challenge). Once labels arrive,
+\textbf{XGBoost and Random Forest catch 93--96 frauds in their top 100 and bring the cost to about EUR 22k}: the labels
+are worth some EUR 40k a day. Keep both: the supervised model for the fraud we know, the detector for the fraud we have
+not seen yet, and the reviewed alerts become tomorrow's labels.
+\end{tcolorbox}
+
+\begin{minipage}[t]{0.52\linewidth}\vspace{0pt}
+\q{Q1. The data.} 492 frauds in 284,807 transactions (\hl{0.173\%}): \hl{``all legitimate'' is 99.83\% accurate and
+catches nothing}, so accuracy is the wrong yardstick. Frauds are smaller (median EUR 9.25 vs 22; max 2,126 vs 25,691):
+card testing with small charges. \hl{At 2 a.m. 1.7\% of transactions are fraud} (4 a.m. 1.0\%) against 0.05--0.3\% in
+daytime hours (0.05\% at 10 a.m.). V1--V28 are PCA components: they say which transactions are far from the rest, never why in
+business terms.
+
+\q{Q2. Isolation.} \hl{A fraud is isolated in 7.9 random splits on average, a legitimate transaction in 13.0.} The
+score distributions are clearly shifted but overlap.
+
+\q{Q3. Top 100 on day 2.}
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrr}
+\toprule
+ & Reviewed & Not reviewed\\
+\midrule
+Fraud & \hl{27} (TP) & 184 (FN)\\
+Legitimate & 73 (FP) & 139,737 (TN)\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\hl{Precision 27\%, recall 12.8\%; a random 100 would hold 0.15 frauds} (about 180 times fewer).
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q1_amount_hour.png}
+
+\includegraphics[width=0.9\linewidth]{\figdir/q7_frauds_caught.png}
+\end{minipage}
+
+\vspace{3pt}
+\q{Q4. More alerts.}
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrrrr}
+\toprule
+Alerts a day & 10 & 25 & 100 & 500 & 1,000 & 2,000 & 5,000\\
+\midrule
+Precision & 0\% & 36\% & 27\% & 11\% & 8.3\% & 6.4\% & 3.5\%\\
+Recall & 0\% & 4.3\% & 12.8\% & 26\% & 39\% & 61\% & 83\%\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+Digging deeper reaches more frauds but through ever less suspicious transactions: \hl{the two cannot both be high
+while frauds and legitimate transactions overlap in score.} \hl{The top 10 holds no fraud at all.}
+
+\q{Q5. How many to review} (N chosen on day 1, applied on day 2; doing nothing costs EUR 105.5k):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrr}
+\toprule
+Cost of a review & EUR 2 & EUR 5 & EUR 10 & EUR 20 & EUR 50\\
+\midrule
+Alerts a day & 4,990 & 4,280 & 2,180 & 1,530 & 350\\
+Day-2 cost & EUR 28.5k & EUR 40.9k & \hl{EUR 60.8k} & EUR 78.6k & EUR 99.0k\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\hl{Reviewing pays at every cost, but at EUR 50 it saves only EUR 6.5k.} Attach the detector to a cheap automatic check
+and reserve analysts for the top of the list.
+
+\q{Q6. What the top alerts are.} \hl{Median amount EUR 487 vs EUR 20 on the day}, furthest from normal on V20, V28 and
+V23: large, unusual and mostly legitimate purchases. \hl{The frauds it does catch are tiny (median EUR 2.28) and very
+negative on V7, V17, V3 and V10.} Unusual is not fraudulent.
+
+\q{Q7. The labels arrive} (class-weighted; N chosen on out-of-fold day-1 scores, review EUR 10):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrrr}
+\toprule
+ & \multicolumn{3}{c}{Top 100 on day 2} & \multicolumn{3}{c}{Cost-optimal}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Model & TP & Precision & Recall & Alerts & Caught & Day-2 cost\\
+\midrule
+Isolation Forest & 27 & 27\% & 12.8\% & 2,180 & 133 & EUR 60.8k\\
+Random Forest & 93 & 93\% & 44.1\% & 300 & 174 & EUR 21.5k\\
+XGBoost & \hl{\textbf{96}} & \textbf{96\%} & \textbf{45.5\%} & 340 & 174 & \hl{EUR 21.9k}\\
+\bottomrule
+\end{tabular}}
+
+\vspace{2pt}
+\hl{The labels are worth about EUR 39k on one day: six times fewer alerts and 41 more frauds stopped.}
+
+\q{Q8. Why keep the detector?} Labels arrive weeks late and a supervised model only knows yesterday's fraud. Run the
+supervised model for known patterns and the anomaly detector as the net for new ones; what analysts confirm from the
+detector's alerts becomes the next training set.
+\end{document}

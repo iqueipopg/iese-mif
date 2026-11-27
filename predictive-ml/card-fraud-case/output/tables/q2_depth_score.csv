@@ -1,0 +1,3 @@
+class,mean_splits,mean_score
+fraud,7.93,0.591
+legit,12.963,0.418

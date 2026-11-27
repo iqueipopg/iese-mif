@@ -1,0 +1,4 @@
+model,TP_top100,FP_top100,precision_top100,recall_top100,N_cost_optimal,caught_at_N,cost_day2
+Isolation Forest,27,73,0.27,0.128,2180,133,60800
+Random Forest,93,7,0.93,0.441,300,174,21500
+XGBoost,96,4,0.96,0.455,340,174,21900
