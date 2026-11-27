@@ -1,0 +1,102 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{How many segments, and how many bets? K-Means and hierarchical clustering}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 26 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} \textbf{Four customer segments}, because two (the silhouette's choice) only says rich or not rich.
+K-Means and Ward agree on most customers (ARI 0.61), but only Ward's segments nest, so a firm that plans strategy on
+four groups and campaigns on six should use Ward, as long as the base fits in memory. Clean first: the other linkages
+spend their clusters on customers aged 122--129 and an income of \$666,666. \textbf{The 28 ETFs are five bets}:
+equities with high yield, Treasuries with investment-grade credit, energy, precious metals and the dollar. That map
+moved with the 2022 rate shock: the stock--bond correlation went from $-0.41$ to $+0.11$.
+\end{tcolorbox}
+
+\q{Q1. Scale.} \hl{Income spans \$1.7k--\$666k; the next widest feature, spending, spans 2,520; kids 0--2.} Unscaled,
+the Euclidean distance would be income. All nine features are standardised.
+
+\q{Q2. K-Means, k = 4} (means by segment):
+
+\vspace{2pt}
+\centerline{\begin{tabular}{lrrrrrrl}
+\toprule
+Segment & n & Age & Income & Spend & Campaigns & Web/month & Action\\
+\midrule
+Affluent big spenders & 523 & 53 & \$78k & \$1,380 & \hl{1.1} & 2.7 & premium, loyalty, the campaigns\\
+Established, teens at home & 590 & 58 & \$61k & \$827 & 0.3 & 5.4 & family bundles\\
+Older families, tight budget & 523 & 59 & \$41k & \$120 & 0.1 & 6.0 & discounts, deals\\
+Young families, low income & 580 & 43 & \$30k & \$126 & 0.2 & \hl{7.0} & web offers (visit most, buy least)\\
+\bottomrule
+\end{tabular}}
+
+\vspace{3pt}
+\begin{minipage}[t]{0.48\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q3_elbow_silhouette.png}
+
+\q{Q3. Choosing k.} Inertia falls smoothly (14.2k, 12.2k, 11.0k, 10.0k): no elbow. \hl{Silhouette is best at k = 2
+(0.27); k = 4 gives 0.21.} The statistics say two; marketing needs more because two groups cannot carry different
+offers.
+
+\q{Q4. Four linkages, four clusters.} \hl{Single: 2,213 / 1 / 1 / 1. Complete and average: 2,203 / 9 / 3 / 1. Ward:
+748 / 503 / 487 / 478.} The tiny clusters are ages 122, 123 and 129 (birth-year typos), the \$666,666 income and
+nine households earning under \$9k. Single, complete and average merge by the closest, farthest or mean pair, so the
+strangest points stay alone until the end; Ward merges whatever adds least variance, which builds balanced groups.
+\hl{Hierarchical clustering doubles as an outlier detector: clean before segmenting.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.49\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q5_ward_dendrogram.png}
+
+\q{Q5. Where to cut.} Last Ward merges: 99.5, 67.3, 46.8, 41.2, 33.5. \hl{The big jumps stop at three to four
+clusters}, while the silhouette preferred two. Ward's four are close to K-Means': young low-income (503), families
+with kids and teens (487), older with teens (748), affluent without children (478).
+
+\q{Q6. Ward vs K-Means.} \hl{ARI 0.61}; silhouette 0.21 (K-Means) vs 0.18 (Ward). \hl{At six segments, 6 of 6 Ward
+segments sit inside one of its four; 1 of 6 for K-Means}, because Ward's six are its four with two cut again.
+Strategy at four and campaigns at six then share one map. The price: a million customers means $5\times10^{11}$
+pairwise distances, 4 TB; K-Means stays linear.
+\end{minipage}
+
+\vspace{2pt}
+\centerline{\includegraphics[width=0.80\linewidth]{\figdir/q7_etf_dendrogram_corr.png}}
+
+\q{Q7. 28 ETFs} (daily returns, Jan 2019--Sep 2026, average linkage, cut at 0.5). \hl{Five bets: 17 equity funds +
+REITs + high yield; Treasuries + TIP + investment grade; energy + oil + commodities; gold + silver; the dollar.}
+\hl{HYG sits with equities ($\rho_{SPY,HYG}=0.78$): default risk rises when the economy falls. LQD sits with
+Treasuries ($\rho_{LQD,IEF}=0.71$): it is mostly rate risk.} The input is a similarity matrix, not a feature table:
+there are no columns to scale, only how pairs move together.
+
+\q{Q8. Two windows.} \hl{$\rho_{SPY,TLT}$: $-0.41$ in 2019--21, $+0.11$ in 2022--26.} Treasuries are their own
+branch in both, but before 2022 that branch is the hedge to equities and after it is one more risk asset with them.
+\hl{A 60/40 lost its diversifier when inflation drove both}, and a diversification map estimated on one window is a
+snapshot of that regime.
+
+\q{Q9. Which one?} K-Means: many observations, numeric features, k known. Hierarchical: few objects, a distance
+matrix as input, nested groups wanted, or k chosen after looking at the tree.
+\end{document}

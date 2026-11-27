@@ -1,0 +1,3 @@
+method,silhouette_k4,nested_6_in_4,ARI_k4
+K-Means,0.205,1 of 6,0.608
+Ward,0.184,6 of 6,0.608

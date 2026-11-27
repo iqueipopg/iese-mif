@@ -1,0 +1,5 @@
+cluster,n,Age,Income,Total_Spending,Total_Purchases,Total_Campaigns_Accepted,Recency,NumWebVisitsMonth,Kidhome,Teenhome
+1,503,43.0,28632.5,93.2,7.5,0.2,46.8,7.0,0.8,0.0
+2,487,54.4,44796.7,275.5,12.7,0.2,50.5,6.4,1.1,0.8
+3,748,59.4,55426.6,668.0,18.0,0.3,49.0,5.3,0.0,0.9
+4,478,53.0,79712.7,1390.4,20.0,1.2,49.8,2.5,0.0,0.0

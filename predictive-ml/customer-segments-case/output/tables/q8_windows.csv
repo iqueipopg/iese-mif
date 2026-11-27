@@ -1,0 +1,3 @@
+window,days,bets,rho_SPY_TLT,rho_SPY_IEF,TLT_cluster
+2019-2021,756,6,-0.41,-0.4,"TLT, IEF, SHY, TIP"
+2022-2026,1190,6,0.11,0.11,"TLT, IEF, SHY, TIP, LQD"
