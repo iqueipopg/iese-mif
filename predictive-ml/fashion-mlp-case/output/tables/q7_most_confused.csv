@@ -1,0 +1,7 @@
+count,true,predicted
+215,T-shirt/top,Shirt
+99,Pullover,Shirt
+93,Coat,Pullover
+86,Pullover,Coat
+80,Shirt,Pullover
+80,Coat,Shirt

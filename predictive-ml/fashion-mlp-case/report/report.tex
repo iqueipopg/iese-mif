@@ -1,0 +1,114 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[hmargin=1.5cm,top=1.1cm,bottom=1.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{soul}
+\sethlcolor{yellow!55}
+\soulregister\texttt7
+\soulregister\emph7
+\soulregister\textbf7
+
+\setlist{nosep,leftmargin=*}
+\setlength{\parskip}{2.5pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+\newcommand{\figdir}{../output/figures}
+\newcommand{\q}[1]{\textbf{\color{blue!50!black}#1}}
+
+\begin{document}
+\small
+
+{\large\textbf{Can a perceptron tag a fashion catalogue? MLPs on Fashion-MNIST}}\\
+Ignacio Queipo de Llano \textperiodcentered{} Predictive Machine Learning in Finance, IESE MiF \textperiodcentered{} 27 November 2026\\[-6pt]
+\rule{\linewidth}{0.4pt}
+
+\begin{tcolorbox}[colback=white,colframe=black,boxrule=0.4pt,sharp corners,left=5pt,right=5pt,top=3pt,bottom=3pt]
+\textbf{Bottom line.} A flat perceptron tags 87\% of the test images correctly, and \textbf{the choice that matters
+most is not the architecture but dividing the pixels by 255}: the same (2, 2) network goes from 31.6\% to 72.7\%.
+After that, width helps until about 16 neurons and a 2-neuron bottleneck hurts. The errors are the ones a person would
+make, among tops with the same silhouette, which is where a model that sees shapes (the CNN, this afternoon) should
+gain. Binarising the input loses 3 points and trains 2.5 times faster: the trade-off behind quantised LLMs.
+\end{tcolorbox}
+
+\begin{minipage}[t]{0.50\linewidth}\vspace{0pt}
+\q{Q1. The data.} 60,000 training and 10,000 test images of $28\times28$ pixels, values 0--255, 6,000 training
+images per class.
+
+\q{Q2. Which classes are hard?} \hl{T-shirt, shirt, pullover and coat share a silhouette}; trousers, bags and footwear
+are easy.
+
+\includegraphics[width=\linewidth]{\figdir/q2_one_per_class.png}
+
+\q{Q3. Normalisation} (same (2, 2) network, 60 epochs): \hl{raw pixels 31.6\% test; pixels / 255: 72.7\%.}
+
+\q{Q4. Why.} scikit-learn starts the weights within $\pm0.086$. \hl{On raw pixels a neuron's first sum averages 116;
+on pixels / 255, 0.45.} Sums that large push ReLUs into huge outputs or into zero, gradients are enormous for some
+weights and nil for others, and Adam's step size was designed for inputs near 1. Same lesson as standardising before
+K-Means: put every input on the scale the algorithm assumes.
+
+\q{Q5. Architecture.} \hl{(16): 86.0\%; (16, 2): 82.8\%; (32, 32): 87.2\%.} A bottleneck is a layer narrower than the
+problem: whatever 16 neurons learned must be squeezed into 2 numbers to choose among 10 classes. \hl{(16, 2) has the
+same parameters as (16) and loses 3 points.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}\vspace{0pt}
+\includegraphics[width=\linewidth]{\figdir/q7_confusion_matrix.png}
+
+\q{Q7. Confusions} (true $\to$ predicted, (32, 32)): \hl{T-shirt $\to$ shirt 215}, pullover $\to$ shirt 99, coat
+$\to$ pullover 93, pullover $\to$ coat 86. Best: trouser 96.7\%, ankle boot 95.8\%; worst: \hl{T-shirt 74.0\%, shirt
+77.4\%}. It matches intuition.
+\end{minipage}
+
+\vspace{3pt}
+\begin{minipage}[t]{0.38\linewidth}\vspace{0pt}
+\q{Q6. Parameters of (32, 32).}
+
+\vspace{2pt}
+\begin{tabular}{lrr}
+\toprule
+Layer & Weights + biases & Total\\
+\midrule
+$784\to32$ & $784\times32+32$ & 25,120\\
+$32\to32$ & $32\times32+32$ & 1,056\\
+$32\to10$ & $32\times10+10$ & 330\\
+\midrule
+ & & \hl{\textbf{26,506}}\\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\hl{95\% of them are in the first layer}: one weight per pixel per neuron.
+\end{minipage}\hfill
+\begin{minipage}[t]{0.58\linewidth}\vspace{0pt}
+\q{Q8. Comparison} (60 epochs, CPU, one model at a time):
+
+\vspace{2pt}
+\begin{tabular}{llrrrr}
+\toprule
+Hidden & Input & Params & Train & Test & CPU\\
+\midrule
+(2, 2) & 0--255 & 1,606 & 31.9\% & 31.6\% & 12 s\\
+(2, 2) & / 255 & 1,606 & 74.0\% & 72.7\% & 16 s\\
+(16) & / 255 & 12,730 & 89.4\% & 86.0\% & 28 s\\
+(16, 2) & / 255 & 12,624 & 85.9\% & 82.8\% & 47 s\\
+(32, 32) & / 255 & 26,506 & 92.5\% & \hl{\textbf{87.2\%}} & 122 s\\
+(32, 32) & binary & 26,506 & 92.9\% & 84.0\% & 48 s\\
+\bottomrule
+\end{tabular}
+\end{minipage}
+
+\vspace{3pt}
+\hl{More parameters buy accuracy with diminishing returns and a growing train--test gap} (92.5 vs 87.2: mild
+overfitting); going from (2, 2) to (16) is worth 13 points, from (16) to (32, 32) barely one, for four times the time.
+
+\q{Q9. Binarise} (pixel $> 0.3 \to 1$). \hl{Test 87.2\% $\to$ 84.0\%; training 122 s $\to$ 48 s.} The model keeps the
+shape and loses the grey shades (texture, prints). Quantisation does the same to a model's weights: LLMs stored in 8
+or 4 bits instead of 16 or 32 run on cheaper hardware at a small cost in quality.
+\end{document}
